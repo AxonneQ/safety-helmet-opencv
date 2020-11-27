@@ -15,48 +15,16 @@ import cv2
 import numpy as np
 import cvui
 import easygui
+from processImage import process as processImage
 
 class SDHException(Exception):
     def __init__(self, exception):
         self.exception = exception
 
 def detect_safety(src_img):
-
-    # Call Human Detection function
-    detected_people = detect_people(src_img)
-
-    # Call Helmet Detection function
-    detected_helmets = detect_helmets(src_img, detected_people)
-
-    # Call deciding logic function
-
-    return detected_helmets
-
-def detect_people(src_img):
-    gray = cv2.cvtColor(src_img, cv2.COLOR_BGR2GRAY)
-    body_cascade = cv2.CascadeClassifier('./classifiers/haarcascade_upperbody.xml')
-
-    return body_cascade.detectMultiScale(gray, 1.03, 3)
-
-def detect_helmets(src_img, bodies):
-    gray = cv2.cvtColor(src_img, cv2.COLOR_BGR2GRAY)
-    src_height, src_width = source_img.shape[:2]
-
-    for(x, y, w, h) in bodies:
-        roi = np.zeros((src_height, src_width), np.uint8)
-        roi[y:y+h, x:x+w] = gray[y:y+h, x:x+w]
-
-        thresh, mask = cv2.threshold(roi, thresh = 220, maxval = 255, type = cv2.THRESH_BINARY)
-        new_mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE ,cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2,2)))
-
-        contours, _ = cv2.findContours(new_mask, mode = cv2.RETR_EXTERNAL, method = cv2.CHAIN_APPROX_SIMPLE)
-        if contours:
-            contours = sorted(contours, key=cv2.contourArea, reverse=True)
-            cx, cy, cw, ch = cv2.boundingRect(contours[0])
-            cv2.rectangle(src_img, (cx, cy), (cx + cw, cy + ch), (0, 255, 0), 2)
-            src_img = cv2.rectangle(src_img, (x,y),(x+w,y+h),(255,0,0),2)
-
-    return src_img
+    img = processImage(src_img)
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    return img
 
 #################### Main driver program #######################
 
@@ -73,6 +41,7 @@ toolbar_top_height = 100
 # Image Containers
 frame = np.zeros((ui_height, ui_width, 3), np.uint8)
 source_img = np.array([])
+source_img_copy = np.array([])
 detected_img = np.array([])
 
 image_loaded = False
@@ -120,6 +89,7 @@ while cv2.getWindowProperty(window_name, 0) >= 0:
                     source_img = np.array([])
                     raise SDHException('Wrong File Type')
 
+                source_img_copy = source_img.copy()
                 src_height, src_width = source_img.shape[:2]
                 scale = max_image_width / src_width                
                 
@@ -138,12 +108,16 @@ while cv2.getWindowProperty(window_name, 0) >= 0:
     cvui.text(frame, 126, 18, load_action_message, 0.4 , load_action_message_color)
 
     # If the image was loaded successfully, 2 buttons appear 'Safety Detection' and 'Save Image'
-    if source_img.size != 0:
+    if source_img_copy.size != 0:
         b_detect = cvui.button(frame, 10, 44, 'Safety Detection')
         if b_detect:
-            detected_img = detect_safety(source_img)
+            detected_img = detect_safety(source_img_copy)
             detect_action_message = 'Done!'
             detect_action_message_color = 0x00FF00
+
+            det_h, det_w = source_img.shape[:2]
+            scale = max_image_width / det_w                  
+            detected_img = cv2.resize(detected_img, (int(det_w * scale), int(det_h * scale)), cv2.INTER_AREA)
             
         cvui.text(frame, 167, 52, detect_action_message, 0.4, detect_action_message_color)
 
