@@ -43,8 +43,8 @@ class SkinDetector(object):
             self.HSVImg, lowerHSV, upperHSV)
 
         self.binaryMask = maskHSV
-    The region Segmentation first will erode the mask from the color segmentation in order to find the sure foreground. 
-    
+        
+    #The region Segmentation first will erode the mask from the color segmentation in order to find the sure foreground. 
     # Then the dilatation of the mask will give back what is the sure background. 
     # The marker will be the sum of the two images so we can find the region that is unknown. 
     # By using the cv2.watershed method, a full mask containing all the informations required is returned
